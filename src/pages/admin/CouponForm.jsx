@@ -53,12 +53,12 @@ const CouponForm = () => {
 
     const fetchCoupon = async () => {
         try {
-            const response = await axios.get(`${API_URL}/api/coupons`);
-            const coupon = response.data.find(c => c._id === id);
-            if (coupon) {
-                setFormData(coupon);
+            const response = await axios.get(`${API_URL}/api/admin/coupons/${id}`);
+            if (response.data.success) {
+                setFormData(response.data.data);
             }
         } catch (error) {
+            console.error('Fetch coupon error:', error);
             toast.error('Failed to fetch coupon');
         }
     };
