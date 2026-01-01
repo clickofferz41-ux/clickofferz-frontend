@@ -10,7 +10,7 @@ const SEO = ({ title, description, keywords, url, image }) => {
             <title>{title ? `${title} | ${siteTitle}` : siteTitle}</title>
             <meta name="description" content={description || "Find the best deals, promo codes, and discounts for your favorite stores at ClickOfferz."} />
             <meta name="keywords" content={keywords || "coupons, deals, promo codes, discounts, saving money"} />
-            <meta name="google-site-verification" content="oiBJai2fp5IyIjIxvh-YR0AgAhyfxaUrX-E5G_X3W6g" />
+            <meta name="google-site-verification" content="mXWO8DA2yO2-laIDCpAIadJYkRhFZRas5S9WcXT-GRE" />
 
             {/* Open Graph / Facebook */}
             <meta property="og:type" content="website" />
