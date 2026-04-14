@@ -1,27 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from '../config';
+import { useGetBlogsQuery } from '../store/api/apiSlice';
 
 const BlogPage = () => {
-    const [blogs, setBlogs] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { data, isLoading } = useGetBlogsQuery();
+    const blogs = data?.blogs ?? [];
 
-    useEffect(() => {
-        const fetchBlogs = async () => {
-            try {
-                const response = await axios.get(`${API_URL}/api/blogs`);
-                setBlogs(response.data.blogs || []);
-                setLoading(false);
-            } catch (error) {
-                console.error("Failed to fetch blogs", error);
-                setLoading(false);
-            }
-        };
-        fetchBlogs();
-    }, []);
-
-    if (loading) return (
+    if (isLoading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="text-xl text-gray-400">Loading articles...</div>
         </div>
@@ -29,7 +14,6 @@ const BlogPage = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen pb-20">
-            {/* Header */}
             <div className="bg-primary text-white py-20 px-4 text-center">
                 <h1 className="text-4xl md:text-5xl font-bold mb-4">ClickOfferz Blog</h1>
                 <p className="text-xl max-w-2xl mx-auto opacity-90">
@@ -37,7 +21,6 @@ const BlogPage = () => {
                 </p>
             </div>
 
-            {/* Blog Grid */}
             <div className="container mx-auto px-4 -mt-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {blogs.length === 0 ? (
@@ -75,9 +58,7 @@ const BlogPage = () => {
                                     <h2 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 hover:text-primary transition-colors">
                                         {blog.title}
                                     </h2>
-                                    <p className="text-gray-600 mb-4 line-clamp-3 text-sm flex-1">
-                                        {blog.excerpt}
-                                    </p>
+                                    <p className="text-gray-600 mb-4 line-clamp-3 text-sm flex-1">{blog.excerpt}</p>
                                     <div className="flex items-center justify-between text-xs text-gray-400 mt-auto pt-4 border-t border-gray-100">
                                         <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
                                         <span>{blog.views} Reads</span>

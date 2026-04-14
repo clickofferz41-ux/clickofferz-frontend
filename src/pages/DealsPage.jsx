@@ -1,99 +1,50 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import CouponCard from '../components/CouponCard'
-import { API_URL } from '../config'
+import { useGetCouponsQuery, useGetCategoriesQuery } from '../store/api/apiSlice'
+
+const LIMIT = 12;
 
 function DealsPage() {
-    const [deals, setDeals] = useState([]);
-    const [filteredDeals, setFilteredDeals] = useState([]);
     const [activeFilter, setActiveFilter] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchParams] = useSearchParams();
-
-    // Pagination State
-    const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const LIMIT = 12;
-
-    const [categories, setCategories] = useState(['All']);
+    const [searchParams] = useSearchParams();
 
     useEffect(() => {
         const urlSearch = searchParams.get('search');
-        if (urlSearch) {
-            setSearchTerm(urlSearch);
-        }
+        if (urlSearch) setSearchTerm(urlSearch);
     }, [searchParams]);
 
-    // Fetch Categories
+    // Reset to page 1 when filters change
     useEffect(() => {
-        fetch(`${API_URL}/api/categories`)
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    const categoryNames = ['All', ...data.map(c => c.name)];
-                    setCategories(categoryNames);
-                }
-            })
-            .catch(err => {
-                console.error('Failed to fetch categories:', err);
-                setCategories(['All']);
-            });
-    }, []);
-
-    // Reset pagination when filters change
-    useEffect(() => {
-        setDeals([]);
-        setFilteredDeals([]);
         setPage(1);
-        fetchDeals(1);
     }, [activeFilter, searchTerm]);
 
-    const fetchDeals = (pageNum) => {
-        setLoading(true);
-
-        let query = `${API_URL}/api/coupons?type=Deal&page=${pageNum}&limit=${LIMIT}`;
-
-        if (activeFilter !== 'All') {
-            query += `&category=${encodeURIComponent(activeFilter)}`;
-        }
-        if (searchTerm) {
-            query += `&search=${encodeURIComponent(searchTerm)}`;
-        }
-
-        fetch(query)
-            .then(res => res.json())
-            .then(data => {
-                // Handle new response structure
-                const items = data.coupons || data;
-                const meta = data.pagination || {};
-
-                setDeals(Array.isArray(items) ? items : []);
-                setFilteredDeals(Array.isArray(items) ? items : []);
-                setTotalPages(meta.totalPages || 1);
-                setLoading(false);
-
-                // Scroll to top
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            })
-            .catch(err => {
-                console.error('Failed to fetch deals:', err);
-                setDeals([]);
-                setFilteredDeals([]);
-                setLoading(false);
-            });
+    const queryArgs = {
+        type: 'Deal',
+        page,
+        limit: LIMIT,
+        ...(activeFilter !== 'All' && { category: activeFilter }),
+        ...(searchTerm && { search: searchTerm }),
     };
+
+    const { data, isLoading, isFetching } = useGetCouponsQuery(queryArgs);
+    const { data: categoriesData = [] } = useGetCategoriesQuery();
+
+    const deals = data?.coupons ?? (Array.isArray(data) ? data : []);
+    const totalPages = data?.pagination?.totalPages ?? 1;
+    const categories = ['All', ...(Array.isArray(categoriesData) ? categoriesData.map((c) => c.name) : [])];
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setPage(newPage);
-            fetchDeals(newPage);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
     return (
         <div className="bg-background min-h-screen">
-            {/* Page Header */}
             <div className="bg-gradient-to-br from-accent to-orange-600">
                 <div className="container mx-auto px-4 py-16">
                     <h1 className="text-4xl font-bold text-white mb-4">Daily Deals</h1>
@@ -102,7 +53,6 @@ function DealsPage() {
             </div>
 
             <div className="container mx-auto px-4 py-8">
-                {/* Search & Filters */}
                 <div className="flex flex-col md:flex-row gap-4 mb-8">
                     <input
                         type="text"
@@ -127,68 +77,51 @@ function DealsPage() {
                     </div>
                 </div>
 
-                {/* Stats Bar */}
                 <div className="bg-white rounded-xl p-4 mb-8 flex items-center justify-between border border-gray-100">
                     <span className="text-gray-600">
-                        Showing <span className="font-bold text-textMain">{filteredDeals.length}</span> results on this page
+                        Showing <span className="font-bold text-textMain">{deals.length}</span> results on this page
                     </span>
-                    <Link to="/coupons" className="text-accent font-medium hover:underline">
-                        View Coupon Codes Instead →
-                    </Link>
+                    <Link to="/coupons" className="text-accent font-medium hover:underline">View Coupon Codes Instead →</Link>
                 </div>
 
-                {/* Deals Grid */}
-                {loading ? (
+                {isLoading || isFetching ? (
                     <div className="text-center py-24">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
                         <p className="text-gray-500 mt-4">Loading deals...</p>
                     </div>
-                ) : filteredDeals.length > 0 ? (
+                ) : deals.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {filteredDeals.map((deal) => (
+                            {deals.map((deal) => (
                                 <CouponCard key={deal._id} coupon={deal} />
                             ))}
                         </div>
 
-                        {/* Numbered Pagination */}
                         {totalPages > 1 && (
                             <div className="mt-12 flex justify-center items-center gap-2">
                                 <button
                                     onClick={() => handlePageChange(page - 1)}
                                     disabled={page === 1}
-                                    className={`px-4 py-2 rounded-lg border text-sm font-medium ${page === 1
-                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-accent'
-                                        }`}
+                                    className={`px-4 py-2 rounded-lg border text-sm font-medium ${page === 1 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-accent'}`}
                                 >
                                     Previous
                                 </button>
-
-                                {/* Page Numbers */}
                                 {[...Array(totalPages)].map((_, index) => {
                                     const pageNum = index + 1;
                                     return (
                                         <button
                                             key={pageNum}
                                             onClick={() => handlePageChange(pageNum)}
-                                            className={`w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center transition-all ${page === pageNum
-                                                    ? 'bg-accent text-white shadow-md'
-                                                    : 'bg-white text-gray-600 border border-gray-200 hover:border-accent hover:text-accent'
-                                                }`}
+                                            className={`w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center transition-all ${page === pageNum ? 'bg-accent text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:border-accent hover:text-accent'}`}
                                         >
                                             {pageNum}
                                         </button>
                                     );
                                 })}
-
                                 <button
                                     onClick={() => handlePageChange(page + 1)}
                                     disabled={page === totalPages}
-                                    className={`px-4 py-2 rounded-lg border text-sm font-medium ${page === totalPages
-                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-accent'
-                                        }`}
+                                    className={`px-4 py-2 rounded-lg border text-sm font-medium ${page === totalPages ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-accent'}`}
                                 >
                                     Next
                                 </button>
@@ -207,4 +140,4 @@ function DealsPage() {
     );
 }
 
-export default DealsPage;
+export default DealsPage

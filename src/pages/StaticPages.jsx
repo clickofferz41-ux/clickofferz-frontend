@@ -1,26 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { API_URL } from '../config';
+import React from 'react';
+import { useGetPageBySlugQuery } from '../store/api/apiSlice';
 
 const DynamicPage = ({ slug, defaultTitle }) => {
-    const [page, setPage] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const { data: page, isLoading } = useGetPageBySlugQuery(slug);
 
-    useEffect(() => {
-        const fetchPage = async () => {
-            try {
-                const response = await axios.get(`${API_URL}/api/pages/${slug}`);
-                setPage(response.data);
-                setLoading(false);
-            } catch (error) {
-                console.error(`Failed to fetch page: ${slug}`, error);
-                setLoading(false);
-            }
-        };
-        fetchPage();
-    }, [slug]);
-
-    if (loading) return <div className="min-h-screen pt-20 text-center text-gray-400">Loading content...</div>;
+    if (isLoading) return <div className="min-h-screen pt-20 text-center text-gray-400">Loading content...</div>;
 
     const title = page?.title || defaultTitle;
     const content = page?.content || '<p>Content not available.</p>';
@@ -32,14 +16,10 @@ const DynamicPage = ({ slug, defaultTitle }) => {
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 border-b pb-6 border-gray-100">
                         {title}
                     </h1>
-
-                    {/* Render HTML Content */}
                     <div
                         className="prose prose-lg prose-blue max-w-none text-gray-600"
                         dangerouslySetInnerHTML={{ __html: content }}
                     />
-
-                    {/* Contact Form Injection for Contact Us page */}
                     {slug === 'contact-us' && (
                         <div className="mt-12 pt-8 border-t border-gray-100">
                             <h3 className="text-xl font-bold text-gray-900 mb-6">Send us a message</h3>

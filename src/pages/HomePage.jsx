@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
+import { Link } from 'react-router-dom'
 import Hero from '../components/Hero'
 import FeaturedStores from '../components/FeaturedStores'
 import TrendingCoupons from '../components/TrendingCoupons'
@@ -6,27 +7,11 @@ import PopularStores from '../components/PopularStores'
 import LatestCoupons from '../components/LatestCoupons'
 import BlogSection from '../components/BlogSection'
 import Newsletter from '../components/Newsletter'
-import { Link } from 'react-router-dom'
-import { API_URL } from '../config'
-
+import { useGetCategoriesQuery } from '../store/api/apiSlice'
 import SEO from '../components/SEO'
 
 function HomePage() {
-    const [categories, setCategories] = useState([]);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/categories`)
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    setCategories(data.slice(0, 12));
-                }
-            })
-            .catch(err => {
-                console.error('Failed to fetch categories:', err);
-                setCategories([]); // Set empty array on error
-            });
-    }, []);
+    const { data: categories = [] } = useGetCategoriesQuery();
 
     return (
         <>
@@ -47,7 +32,7 @@ function HomePage() {
                 <div className="container mx-auto px-4">
                     <h2 className="text-3xl font-bold mb-8 text-center">Top Categories</h2>
                     <div className="flex flex-wrap justify-center gap-4">
-                        {categories.map((cat) => (
+                        {categories.slice(0, 12).map((cat) => (
                             <Link
                                 key={cat._id || cat.name}
                                 to={`/coupons?category=${encodeURIComponent(cat.name.toLowerCase())}`}

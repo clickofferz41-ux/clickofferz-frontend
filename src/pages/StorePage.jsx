@@ -3,59 +3,26 @@ import { useParams, Link } from 'react-router-dom'
 import CouponCard from '../components/CouponCard'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Sidebar from '../components/Sidebar'
-import { API_URL } from '../config'
+import { useGetStoreBySlugQuery, useGetCouponsByStoreQuery } from '../store/api/apiSlice'
 
 function StorePage() {
     const { slug } = useParams();
-    const [store, setStore] = useState(null);
-    const [coupons, setCoupons] = useState([]);
-    const [filteredCoupons, setFilteredCoupons] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('All');
-
     const filterTabs = ['All', 'Codes', 'Sales'];
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
+    const { data: store, isLoading: storeLoading, isError: storeError } = useGetStoreBySlugQuery(slug);
+    const { data: coupons = [], isLoading: couponsLoading } = useGetCouponsByStoreQuery(slug, {
+        skip: !store,
+    });
 
-                // Fetch store details directly by slug
-                const storeRes = await fetch(`${API_URL}/api/stores/${slug}`);
-                if (!storeRes.ok) {
-                    throw new Error('Store not found');
-                }
-                const foundStore = await storeRes.json();
-                setStore(foundStore);
+    const loading = storeLoading || couponsLoading;
 
-                if (foundStore) {
-                    // Fetch coupons for this store
-                    const couponsRes = await fetch(`${API_URL}/api/coupons/store/${slug}`);
-                    const storeCoupons = await couponsRes.json();
-
-                    setCoupons(storeCoupons);
-                    setFilteredCoupons(storeCoupons);
-                }
-            } catch (error) {
-                console.error('Error fetching store data:', error);
-                setStore(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [slug]);
-
-    useEffect(() => {
-        if (activeFilter === 'All') {
-            setFilteredCoupons(coupons);
-        } else if (activeFilter === 'Codes') {
-            setFilteredCoupons(coupons.filter(c => c.type === 'Code'));
-        } else if (activeFilter === 'Sales') {
-            setFilteredCoupons(coupons.filter(c => c.type === 'Deal'));
-        }
-    }, [activeFilter, coupons]);
+    const filteredCoupons = coupons.filter((c) => {
+        if (activeFilter === 'All') return true;
+        if (activeFilter === 'Codes') return c.type === 'Code';
+        if (activeFilter === 'Sales') return c.type === 'Deal';
+        return true;
+    });
 
     if (loading) {
         return (
@@ -65,7 +32,7 @@ function StorePage() {
         );
     }
 
-    if (!store) {
+    if (storeError || !store) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center">
@@ -79,7 +46,7 @@ function StorePage() {
     const breadcrumbs = [
         { label: 'Home', href: '/' },
         { label: 'Stores', href: '/stores' },
-        { label: store.name }
+        { label: store.name },
     ];
 
     return (
@@ -91,11 +58,7 @@ function StorePage() {
                     <div className="flex items-center gap-6 mt-4">
                         <div className="w-24 h-24 bg-gray-50 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden">
                             {store.logoType === 'upload' || store.logoType === 'url' ? (
-                                <img
-                                    src={store.logo}
-                                    alt={store.name}
-                                    className="w-full h-full object-cover"
-                                />
+                                <img src={store.logo} alt={store.name} className="w-full h-full object-cover" />
                             ) : store.logoType === 'emoji' ? (
                                 <span className="text-4xl">{store.logo}</span>
                             ) : store.logoType === 'text' ? (
@@ -136,17 +99,15 @@ function StorePage() {
                 </div>
             </div>
 
-            {/* Main Content with Sidebar */}
+            {/* Main Content */}
             <div className="container mx-auto px-4 py-12">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Coupons List */}
                     <div className="lg:col-span-2">
                         <h2 className="text-2xl font-bold text-textMain mb-6">Available Coupons & Deals</h2>
-
                         {filteredCoupons.length > 0 ? (
                             <div className="space-y-6">
                                 {filteredCoupons.map((coupon) => (
-                                    <CouponCard key={coupon.id} coupon={coupon} />
+                                    <CouponCard key={coupon._id} coupon={coupon} />
                                 ))}
                             </div>
                         ) : (
@@ -157,11 +118,7 @@ function StorePage() {
                             </div>
                         )}
                     </div>
-
-                    {/* Sidebar */}
-                    <div>
-                        <Sidebar />
-                    </div>
+                    <div><Sidebar /></div>
                 </div>
             </div>
         </div>
