@@ -1,24 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { API_URL } from '../config';
+import { useGetCouponsQuery } from '../store/api/apiSlice';
 import CouponCard from '../components/CouponCard';
 
 const TrendingCoupons = () => {
-    const [trendingCoupons, setTrendingCoupons] = useState([]);
-
-    useEffect(() => {
-        fetch(`${API_URL}/api/coupons?trending=true`)
-            .then(res => res.json())
-            .then(data => {
-                // Handle new response format { coupons: [], pagination: {} }
-                const items = data.coupons || data;
-                setTrendingCoupons(Array.isArray(items) ? items : []);
-            })
-            .catch(err => {
-                console.error('Failed to fetch trending coupons:', err);
-                setTrendingCoupons([]); // Set empty array on error
-            });
-    }, []);
+    const { data } = useGetCouponsQuery({ trending: 'true' });
+    const trendingCoupons = data?.coupons ?? (Array.isArray(data) ? data : []);
 
     const overlayColors = [
         'from-teal-400/20 to-teal-600/20',
@@ -39,7 +26,6 @@ const TrendingCoupons = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {trendingCoupons.map((coupon, index) => (
                         <div key={coupon._id} className="relative">
-                            {/* Colored overlay background */}
                             <div className={`absolute inset-0 bg-gradient-to-br ${overlayColors[index % overlayColors.length]} rounded-xl -z-10`}></div>
                             <CouponCard coupon={coupon} />
                         </div>

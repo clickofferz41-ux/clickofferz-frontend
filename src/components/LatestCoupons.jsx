@@ -1,31 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useGetCouponsQuery } from '../store/api/apiSlice';
 import CouponCard from './CouponCard';
-import { API_URL } from '../config';
 
 const LatestCoupons = () => {
-    const [coupons, setCoupons] = useState([]);
-    const [filter, setFilter] = useState('All'); // All, Code, Deal
+    const [filter, setFilter] = useState('All');
+    const { data } = useGetCouponsQuery({ limit: 20 });
+    const allCoupons = data?.coupons ?? (Array.isArray(data) ? data : []);
 
-    useEffect(() => {
-        // Limit to 9 items for homepage
-        fetch(`${API_URL}/api/coupons?limit=20`)
-            .then(res => res.json())
-            .then(data => {
-                // Handle new response format { coupons: [], pagination: {} }
-                const items = data.coupons || data;
-                setCoupons(Array.isArray(items) ? items : []);
-            })
-            .catch(err => {
-                console.error('Failed to fetch coupons:', err);
-                setCoupons([]); // Set empty array on error to prevent crashes
-            });
-    }, []);
-
-    const filteredCoupons = coupons.filter(c => {
+    const filteredCoupons = allCoupons.filter(c => {
         if (filter === 'All') return true;
         return c.type === filter;
-    }).slice(0, 9); // Display top 9 after filtering
+    }).slice(0, 9);
 
     return (
         <section className="bg-gray-50 py-16">
