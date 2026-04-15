@@ -9,15 +9,31 @@ const Coupons = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterType, setFilterType] = useState('all');
+    const [pagination, setPagination] = useState({
+        page: 1,
+        totalPages: 1,
+        total: 0,
+        count: 0
+    });
 
     useEffect(() => {
-        fetchCoupons();
+        fetchCoupons(1);
     }, []);
 
-    const fetchCoupons = async () => {
+    const fetchCoupons = async (page = 1) => {
+        setLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/api/admin/coupons`);
-            setCoupons(response.data.data);
+            const response = await axios.get(`${API_URL}/api/admin/coupons`, {
+                params: { page }
+            });
+
+            setCoupons(response.data?.data || []);
+            setPagination({
+                page: response.data?.page || page,
+                totalPages: response.data?.totalPages || 1,
+                total: response.data?.total || 0,
+                count: response.data?.count || 0
+            });
         } catch (error) {
             toast.error('Failed to fetch coupons');
         } finally {
@@ -31,10 +47,18 @@ const Coupons = () => {
         try {
             await axios.delete(`${API_URL}/api/admin/coupons/${id}`);
             toast.success('Coupon deleted successfully');
-            fetchCoupons();
+
+            const shouldGoPreviousPage = coupons.length === 1 && pagination.page > 1;
+            const nextPage = shouldGoPreviousPage ? pagination.page - 1 : pagination.page;
+            fetchCoupons(nextPage);
         } catch (error) {
             toast.error('Failed to delete coupon');
         }
+    };
+
+    const handlePageChange = (nextPage) => {
+        if (nextPage < 1 || nextPage > pagination.totalPages || nextPage === pagination.page) return;
+        fetchCoupons(nextPage);
     };
 
     const filteredCoupons = coupons.filter(coupon => {
@@ -144,6 +168,41 @@ const Coupons = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination */}
+            {!loading && pagination.totalPages > 1 && (
+                <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <p className="text-sm text-gray-600">
+                        Page <span className="font-semibold text-gray-800">{pagination.page}</span> of{' '}
+                        <span className="font-semibold text-gray-800">{pagination.totalPages}</span>
+                        {' '}| Total coupons: <span className="font-semibold text-gray-800">{pagination.total}</span>
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            disabled={pagination.page === 1}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Previous
+                        </button>
+
+                        <span className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg min-w-[90px] text-center">
+                            {pagination.page} / {pagination.totalPages}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            disabled={pagination.page === pagination.totalPages}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
