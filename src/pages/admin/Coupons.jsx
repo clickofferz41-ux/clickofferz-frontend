@@ -8,6 +8,7 @@ const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [pagination, setPagination] = useState({
     page: 1,
@@ -18,13 +19,45 @@ const Coupons = () => {
 
   useEffect(() => {
     fetchCoupons(1);
-  }, []);
+  }, [debouncedSearch, filterType]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const buildQueryParams = (page) => {
+    const trimmedSearch = debouncedSearch.trim();
+    const params = { page };
+
+    if (trimmedSearch) {
+      // Send common search keys to support backend implementations with different param names.
+      params.search = trimmedSearch;
+      params.keyword = trimmedSearch;
+      params.query = trimmedSearch;
+      params.q = trimmedSearch;
+
+      if (pagination.total > 0) {
+        params.count = pagination.total;
+        params.limit = pagination.total;
+      }
+    }
+
+    if (filterType !== "all") {
+      params.type = filterType;
+    }
+
+    return params;
+  };
 
   const fetchCoupons = async (page = 1) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/api/admin/coupons`, {
-        params: { page },
+        params: buildQueryParams(page),
       });
 
       setCoupons(response.data?.data || []);
@@ -67,14 +100,6 @@ const Coupons = () => {
       return;
     fetchCoupons(nextPage);
   };
-
-  const filteredCoupons = coupons.filter((coupon) => {
-    const matchesSearch =
-      coupon.title.toLowerCase().includes(search.toLowerCase()) ||
-      coupon.storeName.toLowerCase().includes(search.toLowerCase());
-    const matchesType = filterType === "all" || coupon.type === filterType;
-    return matchesSearch && matchesType;
-  });
 
   return (
     <div className="p-8">
@@ -143,14 +168,14 @@ const Coupons = () => {
                   Loading...
                 </td>
               </tr>
-            ) : filteredCoupons.length === 0 ? (
+            ) : coupons.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                   No coupons found
                 </td>
               </tr>
             ) : (
-              filteredCoupons.map((coupon) => (
+              coupons.map((coupon) => (
                 <tr
                   key={coupon._id}
                   className="border-b border-gray-100 hover:bg-gray-50"
@@ -222,6 +247,11 @@ const Coupons = () => {
             <span className="font-semibold text-gray-800">
               {pagination.totalPages}
             </span>{" "}
+            | Showing{" "}
+            <span className="font-semibold text-gray-800">
+              {pagination.count}
+            </span>{" "}
+            coupons{" "}
             | Total coupons:{" "}
             <span className="font-semibold text-gray-800">
               {pagination.total}
