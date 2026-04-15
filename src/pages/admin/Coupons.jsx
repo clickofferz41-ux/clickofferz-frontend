@@ -8,65 +8,16 @@ const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [pagination, setPagination] = useState({
-    page: 1,
-    totalPages: 1,
-    total: 0,
-    count: 0,
-  });
 
   useEffect(() => {
-    fetchCoupons(1);
-  }, [debouncedSearch, filterType]);
+    fetchCoupons();
+  }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const buildQueryParams = (page) => {
-    const trimmedSearch = debouncedSearch.trim();
-    const params = { page };
-
-    if (trimmedSearch) {
-      // Send common search keys to support backend implementations with different param names.
-      params.search = trimmedSearch;
-      params.keyword = trimmedSearch;
-      params.query = trimmedSearch;
-      params.q = trimmedSearch;
-
-      if (pagination.total > 0) {
-        params.count = pagination.total;
-        params.limit = pagination.total;
-      }
-    }
-
-    if (filterType !== "all") {
-      params.type = filterType;
-    }
-
-    return params;
-  };
-
-  const fetchCoupons = async (page = 1) => {
-    setLoading(true);
+  const fetchCoupons = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/admin/coupons`, {
-        params: buildQueryParams(page),
-      });
-
-      setCoupons(response.data?.data || []);
-      setPagination({
-        page: response.data?.page || page,
-        totalPages: response.data?.totalPages || 1,
-        total: response.data?.total || 0,
-        count: response.data?.count || 0,
-      });
+      const response = await axios.get(`${API_URL}/api/admin/coupons`);
+      setCoupons(response.data.data);
     } catch (error) {
       toast.error("Failed to fetch coupons");
     } finally {
@@ -80,26 +31,19 @@ const Coupons = () => {
     try {
       await axios.delete(`${API_URL}/api/admin/coupons/${id}`);
       toast.success("Coupon deleted successfully");
-
-      const shouldGoPreviousPage = coupons.length === 1 && pagination.page > 1;
-      const nextPage = shouldGoPreviousPage
-        ? pagination.page - 1
-        : pagination.page;
-      fetchCoupons(nextPage);
+      fetchCoupons();
     } catch (error) {
       toast.error("Failed to delete coupon");
     }
   };
 
-  const handlePageChange = (nextPage) => {
-    if (
-      nextPage < 1 ||
-      nextPage > pagination.totalPages ||
-      nextPage === pagination.page
-    )
-      return;
-    fetchCoupons(nextPage);
-  };
+  const filteredCoupons = coupons.filter((coupon) => {
+    const matchesSearch =
+      coupon.title.toLowerCase().includes(search.toLowerCase()) ||
+      coupon.storeName.toLowerCase().includes(search.toLowerCase());
+    const matchesType = filterType === "all" || coupon.type === filterType;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="p-8">
@@ -168,14 +112,14 @@ const Coupons = () => {
                   Loading...
                 </td>
               </tr>
-            ) : coupons.length === 0 ? (
+            ) : filteredCoupons.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                   No coupons found
                 </td>
               </tr>
             ) : (
-              coupons.map((coupon) => (
+              filteredCoupons.map((coupon) => (
                 <tr
                   key={coupon._id}
                   className="border-b border-gray-100 hover:bg-gray-50"
@@ -234,54 +178,6 @@ const Coupons = () => {
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
-      {!loading && pagination.totalPages > 1 && (
-        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <p className="text-sm text-gray-600">
-            Page{" "}
-            <span className="font-semibold text-gray-800">
-              {pagination.page}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-gray-800">
-              {pagination.totalPages}
-            </span>{" "}
-            | Showing{" "}
-            <span className="font-semibold text-gray-800">
-              {pagination.count}
-            </span>{" "}
-            coupons | Total coupons:{" "}
-            <span className="font-semibold text-gray-800">
-              {pagination.total}
-            </span>
-          </p>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-
-            <span className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg min-w-[90px] text-center">
-              {pagination.page} / {pagination.totalPages}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
