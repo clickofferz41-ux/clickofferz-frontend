@@ -251,8 +251,7 @@ const Coupons = () => {
             <span className="font-semibold text-gray-800">
               {pagination.count}
             </span>{" "}
-            coupons{" "}
-            | Total coupons:{" "}
+            coupons | Total coupons:{" "}
             <span className="font-semibold text-gray-800">
               {pagination.total}
             </span>
